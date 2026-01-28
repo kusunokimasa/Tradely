@@ -42,6 +42,10 @@ st.markdown("""
         background-color: #2EA043;
         border-color: #3FB950;
     }
+    .delete-btn {
+        background-color: #FF4757 !important;
+        border-color: #FF6B7A !important;
+    }
     .metric-card {
         background-color: #1E2329;
         border-radius: 8px;
@@ -57,6 +61,16 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# Default strategies
+DEFAULT_STRATEGIES = [
+    "Trend Following",
+    "Breakout",
+    "Mean Reversion",
+    "Scalping",
+    "Swing Trading",
+    "News Trading"
+]
+
 # Initialize session state
 if 'trades' not in st.session_state:
     if os.path.exists('trades_data.csv'):
@@ -69,6 +83,19 @@ if 'trades' not in st.session_state:
             'Mood', 'Market_Condition', 'Journal', 'Followed_Plan'
         ])
 
+# Initialize custom strategies
+if 'custom_strategies' not in st.session_state:
+    if os.path.exists('strategies.json'):
+        with open('strategies.json', 'r') as f:
+            st.session_state.custom_strategies = json.load(f)
+    else:
+        st.session_state.custom_strategies = DEFAULT_STRATEGIES.copy()
+
+def save_strategies():
+    """Save custom strategies to JSON"""
+    with open('strategies.json', 'w') as f:
+        json.dump(st.session_state.custom_strategies, f)
+
 def save_trades():
     """Save trades to CSV"""
     st.session_state.trades.to_csv('trades_data.csv', index=False)
@@ -79,6 +106,22 @@ def delete_trade(trade_id):
     save_trades()
     st.success(f"✅ Trade {trade_id} deleted!")
     st.rerun()
+
+def add_strategy(new_strategy):
+    """Add a new custom strategy"""
+    if new_strategy and new_strategy not in st.session_state.custom_strategies:
+        st.session_state.custom_strategies.append(new_strategy)
+        save_strategies()
+        return True
+    return False
+
+def remove_strategy(strategy_to_remove):
+    """Remove a custom strategy"""
+    if strategy_to_remove in st.session_state.custom_strategies:
+        st.session_state.custom_strategies.remove(strategy_to_remove)
+        save_strategies()
+        return True
+    return False
 
 def calculate_pnl(direction, entry, exit_price, lots):
     """Calculate P&L and pips"""
@@ -123,7 +166,15 @@ def get_stats():
 
 # Sidebar navigation
 st.sidebar.title("📊 Tradely")
-page = st.sidebar.radio("Navigation", ["Dashboard", "Add Trade", "Trade History", "Manage Trades", "Analytics", "Calendar View"])
+page = st.sidebar.radio("Navigation", [
+    "Dashboard", 
+    "Add Trade", 
+    "Trade History", 
+    "Manage Trades", 
+    "Manage Strategies",
+    "Analytics", 
+    "Calendar View"
+])
 
 # ==================== DASHBOARD PAGE ====================
 if page == "Dashboard":
@@ -213,23 +264,14 @@ elif page == "Add Trade":
         entry_price = st.number_input("Entry Price", min_value=0.0, value=1.19450, format="%.5f")
         exit_price = st.number_input("Exit Price", min_value=0.0, value=1.19800, format="%.5f")
         stop_loss = st.number_input("Stop Loss", min_value=0.0, value=1.19200, format="%.5f")
-        # Take profit with 1 decimal place
         take_profit = st.number_input("Take Profit", min_value=0.0, value=1.2, format="%.1f")
         lots = st.number_input("Lots", min_value=0.01, value=1.0, step=0.1)
     
     with col2:
         st.subheader("Analysis & Journal")
         
-        # Custom strategy input
-        strategy_option = st.selectbox("Strategy", [
-            "Custom", "Trend Following", "Breakout", "Mean Reversion", 
-            "Scalping", "Swing Trading", "News Trading"
-        ])
-        
-        if strategy_option == "Custom":
-            strategy = st.text_input("Enter Strategy Name", placeholder="e.g., My Strategy")
-        else:
-            strategy = strategy_option
+        # Use custom strategies list
+        strategy = st.selectbox("Strategy", st.session_state.custom_strategies)
         
         timeframe = st.selectbox("Timeframe", ["M1", "M5", "M15", "M30", "H1", "H4", "D1"])
         session = st.selectbox("Session", ["Asian", "London", "NY", "London/NY Overlap"])
@@ -349,6 +391,50 @@ elif page == "Manage Trades":
             st.markdown("---")
     else:
         st.info("No trades to manage.")
+
+# ==================== MANAGE STRATEGIES PAGE ====================
+elif page == "Manage Strategies":
+    st.title("⚙️ Manage Strategies")
+    
+    st.markdown("""
+    Customize your strategy dropdown list. Add your own strategy names or remove ones you don't use.
+    """)
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        st.subheader("Current Strategies")
+        
+        for i, strategy in enumerate(st.session_state.custom_strategies):
+            col_a, col_b = st.columns([3, 1])
+            with col_a:
+                st.write(f"• {strategy}")
+            with col_b:
+                if st.button("🗑️ Remove", key=f"remove_strat_{i}"):
+                    if remove_strategy(strategy):
+                        st.success(f"Removed '{strategy}'")
+                        st.rerun()
+        
+        if st.button("🔄 Reset to Defaults"):
+            st.session_state.custom_strategies = DEFAULT_STRATEGIES.copy()
+            save_strategies()
+            st.success("Reset to default strategies!")
+            st.rerun()
+    
+    with col2:
+        st.subheader("Add New Strategy")
+        
+        new_strategy = st.text_input("Strategy Name", placeholder="e.g., London Breakout")
+        
+        if st.button("➕ Add Strategy"):
+            if new_strategy:
+                if add_strategy(new_strategy):
+                    st.success(f"Added '{new_strategy}' to strategies!")
+                    st.rerun()
+                else:
+                    st.error("Strategy already exists or is empty!")
+            else:
+                st.error("Please enter a strategy name!")
 
 # ==================== ANALYTICS PAGE ====================
 elif page == "Analytics":

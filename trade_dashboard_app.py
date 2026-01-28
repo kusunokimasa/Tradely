@@ -559,9 +559,7 @@ elif page == "Manage Trades":
 elif page == "Manage Strategies":
     st.title("⚙️ Manage Strategies")
     
-    st.markdown("""
-    Customize your strategy dropdown list. Add your own strategy names or remove ones you don't use.
-    """)
+   st.markdown("Customize your strategy dropdown list. Add your own strategy names or remove ones you don't use.")
     
     col1, col2 = st.columns(2)
     

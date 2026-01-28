@@ -264,7 +264,7 @@ elif page == "Add Trade":
         time = st.time_input("Time", datetime.now().time())
         direction = st.selectbox("Direction", ["BUY", "SELL"])
         
-        entry_price = st.number_input("Entry Price", min_value=0.0, value=1.194 custom strategy"""
+        entry_price = st.number_input("Entry Price", min_value=0.0, value=1.19450, format="%.5f")
     if new_strategy and new_strategy not in st.session_state.custom_strategies:
         st.session_state.custom_strategies.append(new_strategy)
         save_strategies()

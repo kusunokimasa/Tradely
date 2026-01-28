@@ -142,7 +142,8 @@ if page == "Dashboard":
         with col3:
             st.metric("Total Trades", stats['total_trades'])
         with col4:
-            st.metric("Profit Factor", f"{stats['profit_factor']:.2f}")
+            pf_display = f"{stats['profit_factor']:.2f}" if stats['profit_factor'] != float('inf') else "∞"
+            st.metric("Profit Factor", pf_display)
         with col5:
             st.metric("Avg Win", f"${stats['avg_win']:,.2f}")
         with col6:
@@ -212,15 +213,24 @@ elif page == "Add Trade":
         entry_price = st.number_input("Entry Price", min_value=0.0, value=1.19450, format="%.5f")
         exit_price = st.number_input("Exit Price", min_value=0.0, value=1.19800, format="%.5f")
         stop_loss = st.number_input("Stop Loss", min_value=0.0, value=1.19200, format="%.5f")
-        take_profit = st.number_input("Take Profit", min_value=0.0, value=1.20000, format="%.5f")
+        # Take profit with 1 decimal place
+        take_profit = st.number_input("Take Profit", min_value=0.0, value=1.2, format="%.1f")
         lots = st.number_input("Lots", min_value=0.01, value=1.0, step=0.1)
     
     with col2:
         st.subheader("Analysis & Journal")
-        strategy = st.selectbox("Strategy", [
-            "Trend Following", "Breakout", "Mean Reversion", 
+        
+        # Custom strategy input
+        strategy_option = st.selectbox("Strategy", [
+            "Custom", "Trend Following", "Breakout", "Mean Reversion", 
             "Scalping", "Swing Trading", "News Trading"
         ])
+        
+        if strategy_option == "Custom":
+            strategy = st.text_input("Enter Strategy Name", placeholder="e.g., My Strategy")
+        else:
+            strategy = strategy_option
+        
         timeframe = st.selectbox("Timeframe", ["M1", "M5", "M15", "M30", "H1", "H4", "D1"])
         session = st.selectbox("Session", ["Asian", "London", "NY", "London/NY Overlap"])
         exit_reason = st.selectbox("Exit Reason", [
@@ -447,22 +457,24 @@ elif page == "Calendar View":
                         pnl = day_data.iloc[0]['Total_PnL']
                         num = int(day_data.iloc[0]['Num_Trades'])
                         color = "#00D084" if pnl > 0 else "#FF4757"
+                        bg_color = '#0D2818' if pnl > 0 else '#280D0D'
                         
                         cols[i].markdown(f"""
-                        <div style="background-color: {'#0D2818' if pnl > 0 else '#280D0D'}; 
+                        <div style="background-color: {bg_color}; 
                                     padding: 10px; border-radius: 5px; border: 1px solid {color};">
                             <strong style="color: white;">{day}</strong><br>
                             <span style="color: {color}; font-size: 18px; font-weight: bold;">
                                 {'+' if pnl > 0 else ''}${pnl:.0f}
                             </span><br>
-                            <span style="color: #888; font-size: 12px;">{num} trades</span>
+                            <span style="color: #CCCCCC; font-size: 12px;">{num} trades</span>
                         </div>
                         """, unsafe_allow_html=True)
                     else:
+                        # White text for "No trades"
                         cols[i].markdown(f"""
-                        <div style="background-color: #1E2329; padding: 10px; border-radius: 5px;">
-                            <strong style="color: #555;">{day}</strong><br>
-                            <span style="color: #444; font-size: 12px;">No trades</span>
+                        <div style="background-color: #1E2329; padding: 10px; border-radius: 5px; border: 1px solid #444;">
+                            <strong style="color: #FFFFFF;">{day}</strong><br>
+                            <span style="color: #AAAAAA; font-size: 12px;">No trades</span>
                         </div>
                         """, unsafe_allow_html=True)
     else:

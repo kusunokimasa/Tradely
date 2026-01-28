@@ -1,6 +1,3 @@
-
-# Create fixed version with delete functionality and corrected Plotly code
-fixed_app = '''
 """
 Tradely - Professional Trading Journal
 ======================================
@@ -45,10 +42,6 @@ st.markdown("""
         background-color: #2EA043;
         border-color: #3FB950;
     }
-    .delete-btn {
-        background-color: #FF4757 !important;
-        border-color: #FF6B7A !important;
-    }
     .metric-card {
         background-color: #1E2329;
         border-radius: 8px;
@@ -60,20 +53,6 @@ st.markdown("""
     }
     .loss-text {
         color: #FF4757 !important;
-    }
-    .stTextInput>div>div>input {
-        background-color: #0F1419;
-        color: white;
-        border: 1px solid #30363D;
-    }
-    .stSelectbox>div>div {
-        background-color: #0F1419;
-        color: white;
-    }
-    .stTextArea>div>div>textarea {
-        background-color: #0F1419;
-        color: white;
-        border: 1px solid #30363D;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -153,7 +132,6 @@ if page == "Dashboard":
     stats = get_stats()
     
     if stats:
-        # Key metrics row
         col1, col2, col3, col4, col5, col6 = st.columns(6)
         
         with col1:
@@ -172,11 +150,9 @@ if page == "Dashboard":
         
         st.markdown("---")
         
-        # Recent trades table
         st.subheader("Recent Trades")
         recent = st.session_state.trades.tail(10).iloc[::-1]
         
-        # Format for display
         display_df = recent[['Trade_ID', 'Date', 'Time', 'Direction', 'Entry_Price', 'Exit_Price', 
                             'PnL', 'Pips', 'Strategy', 'Confluence']].copy()
         display_df['PnL'] = display_df['PnL'].apply(lambda x: f"${x:,.2f}" if x > 0 else f"-${abs(x):,.2f}")
@@ -185,7 +161,6 @@ if page == "Dashboard":
         
         st.dataframe(display_df, use_container_width=True)
         
-        # Win/Loss chart
         col1, col2 = st.columns(2)
         
         with col1:
@@ -208,7 +183,6 @@ if page == "Dashboard":
             st.subheader("P&L by Strategy")
             if len(st.session_state.trades) > 0:
                 strategy_pnl = st.session_state.trades.groupby('Strategy')['PnL'].sum().reset_index()
-                # FIXED: Use valid Plotly color scale
                 fig = px.bar(strategy_pnl, x='Strategy', y='PnL',
                             color='PnL', 
                             color_continuous_scale=[(0, '#FF4757'), (0.5, '#FFD700'), (1, '#00D084')])
@@ -264,7 +238,6 @@ elif page == "Add Trade":
     journal = st.text_area("Notes", placeholder="Describe your trade setup, emotions, lessons learned...")
     
     if st.button("💾 SAVE TRADE", key="save_trade"):
-        # Calculate P&L
         pips, pnl = calculate_pnl(direction, entry_price, exit_price, lots)
         
         new_trade = {
@@ -299,8 +272,6 @@ elif page == "Add Trade":
         save_trades()
         
         st.success(f"✅ Trade saved! P&L: ${pnl:,.2f} ({pips:+.1f} pips)")
-        
-        # Show quick stats
         st.metric("Total Trades", len(st.session_state.trades))
 
 # ==================== TRADE HISTORY PAGE ====================
@@ -308,7 +279,6 @@ elif page == "Trade History":
     st.title("📜 Trade History")
     
     if len(st.session_state.trades) > 0:
-        # Filters
         col1, col2, col3 = st.columns(3)
         with col1:
             strategy_filter = st.multiselect("Strategy", 
@@ -318,7 +288,6 @@ elif page == "Trade History":
         with col3:
             confluence_filter = st.multiselect("Setup Quality", ["A+", "B", "C"])
         
-        # Apply filters
         filtered = st.session_state.trades.copy()
         if strategy_filter:
             filtered = filtered[filtered['Strategy'].isin(strategy_filter)]
@@ -327,10 +296,8 @@ elif page == "Trade History":
         if confluence_filter:
             filtered = filtered[filtered['Confluence'].isin(confluence_filter)]
         
-        # Display
         st.dataframe(filtered, use_container_width=True)
         
-        # Export
         if st.button("📥 Export to CSV"):
             csv = filtered.to_csv(index=False)
             st.download_button(
@@ -349,7 +316,6 @@ elif page == "Manage Trades":
     if len(st.session_state.trades) > 0:
         st.warning("⚠️ Deleting trades is permanent! Export your data first if needed.")
         
-        # Show all trades with delete buttons
         for idx, trade in st.session_state.trades.iterrows():
             col1, col2, col3, col4 = st.columns([3, 2, 2, 1])
             
@@ -381,7 +347,6 @@ elif page == "Analytics":
     if len(st.session_state.trades) > 0:
         trades = st.session_state.trades
         
-        # Cumulative P&L chart
         st.subheader("Cumulative P&L")
         trades_sorted = trades.sort_values('Date')
         trades_sorted['Cumulative_PnL'] = trades_sorted['PnL'].cumsum()
@@ -403,7 +368,6 @@ elif page == "Analytics":
         )
         st.plotly_chart(fig, use_container_width=True)
         
-        # Performance by day of week
         col1, col2 = st.columns(2)
         
         with col1:
@@ -413,7 +377,6 @@ elif page == "Analytics":
                 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'
             ])
             
-            # FIXED: Create valid color scale
             fig = px.bar(daily_perf, 
                         color=daily_perf.values,
                         color_continuous_scale=[(0, '#FF4757'), (0.5, '#FFD700'), (1, '#00D084')])
@@ -446,14 +409,12 @@ elif page == "Calendar View":
     st.title("📅 Calendar View")
     
     if len(st.session_state.trades) > 0:
-        # Month selector
         col1, col2 = st.columns(2)
         with col1:
             year = st.selectbox("Year", [2025, 2026], index=1)
         with col2:
             month = st.selectbox("Month", range(1, 13), format_func=lambda x: calendar.month_name[x])
         
-        # Get daily summary
         trades = st.session_state.trades.copy()
         trades['Date'] = pd.to_datetime(trades['Date'])
         month_trades = trades[(trades['Date'].dt.year == year) & (trades['Date'].dt.month == month)]
@@ -464,19 +425,16 @@ elif page == "Calendar View":
         }).reset_index()
         daily_summary.columns = ['Day', 'Total_PnL', 'Num_Trades']
         
-        # Create calendar grid
         cal = calendar.Calendar()
         month_days = cal.monthdayscalendar(year, month)
         
         st.markdown("### " + calendar.month_name[month] + " " + str(year))
         
-        # Header
         cols = st.columns(7)
         days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
         for i, day in enumerate(days):
             cols[i].markdown(f"**{day}**")
         
-        # Calendar days
         for week in month_days:
             cols = st.columns(7)
             for i, day in enumerate(week):
@@ -520,17 +478,3 @@ Tradely is a professional trading journal and performance analytics platform.
 
 Designed for traders who want to track, analyse, and improve their trading.
 """)
-'''
-
-# Save the fixed file
-with open('/mnt/kimi/output/trade_dashboard_app_fixed.py', 'w') as f:
-    f.write(fixed_app)
-
-print("✅ FIXED app created with:")
-print("   1. ✅ Delete functionality (new 'Manage Trades' page)")
-print("   2. ✅ Fixed Plotly color scale errors")
-print("   3. ✅ All color scales now use valid Plotly format")
-print("\n🚀 To deploy:")
-print("   1. Copy the code from trade_dashboard_app_fixed.py")
-print("   2. Paste into GitHub trade_dashboard_app.py")
-print("   3. Commit and reboot in Streamlit")

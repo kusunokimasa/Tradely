@@ -1,6 +1,11 @@
+
+# Create updated version with your custom branding
+updated_app = '''
 """
-EURUSD Trade Dashboard - Streamlit Web App
-Run with: streamlit run trade_dashboard_app.py
+Tradely - Professional Trading Journal
+======================================
+Tradely is a professional trading journal and performance analytics platform.
+Designed for traders who want to track, analyse, and improve their trading.
 """
 
 import streamlit as st
@@ -15,7 +20,7 @@ import os
 
 # Page configuration
 st.set_page_config(
-    page_title="EURUSD Trade Journal",
+    page_title="Tradely - Trading Journal",
     page_icon="📊",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -51,6 +56,20 @@ st.markdown("""
     }
     .loss-text {
         color: #FF4757 !important;
+    }
+    .stTextInput>div>div>input {
+        background-color: #0F1419;
+        color: white;
+        border: 1px solid #30363D;
+    }
+    .stSelectbox>div>div {
+        background-color: #0F1419;
+        color: white;
+    }
+    .stTextArea>div>div>textarea {
+        background-color: #0F1419;
+        color: white;
+        border: 1px solid #30363D;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -113,7 +132,7 @@ def get_stats():
     }
 
 # Sidebar navigation
-st.sidebar.title("📊 Trade Journal")
+st.sidebar.title("📊 Tradely")
 page = st.sidebar.radio("Navigation", ["Dashboard", "Add Trade", "Trade History", "Analytics", "Calendar View"])
 
 # ==================== DASHBOARD PAGE ====================
@@ -428,12 +447,33 @@ elif page == "Calendar View":
                             <span style="color: #444; font-size: 12px;">No trades</span>
                         </div>
                         """, unsafe_allow_html=True)
+    else:
+        st.info("No trades to display on calendar.")
 
-# Footer
+# Footer with YOUR branding
 st.sidebar.markdown("---")
 st.sidebar.markdown("### About")
 st.sidebar.info("""
-**EURUSD Trade Journal**
+**Tradely**
 
-Free trading dashboard inspired by TradeZella.
+Tradely is a professional trading journal and performance analytics platform. 
+
+Designed for traders who want to track, analyse, and improve their trading.
 """)
+'''
+
+# Save the updated file
+with open('/mnt/kimi/output/trade_dashboard_app_updated.py', 'w') as f:
+    f.write(updated_app)
+
+print("✅ Updated file created with your Tradely branding!")
+print("\n📝 Changes made:")
+print("   - Page title: 'Tradely - Trading Journal'")
+print("   - Sidebar title: 'Tradely'")
+print("   - About section: Your custom description")
+print("   - Docstring: Your branding message")
+print("\n🚀 Next steps:")
+print("   1. Copy the code from trade_dashboard_app_updated.py")
+print("   2. Paste into your GitHub trade_dashboard_app.py file")
+print("   3. Commit changes")
+print("   4. Reboot in Streamlit Cloud")

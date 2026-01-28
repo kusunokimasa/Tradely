@@ -1,6 +1,6 @@
 
-# Create updated version with your custom branding
-updated_app = '''
+# Create fixed version with delete functionality and corrected Plotly code
+fixed_app = '''
 """
 Tradely - Professional Trading Journal
 ======================================
@@ -44,6 +44,10 @@ st.markdown("""
     .stButton>button:hover {
         background-color: #2EA043;
         border-color: #3FB950;
+    }
+    .delete-btn {
+        background-color: #FF4757 !important;
+        border-color: #FF6B7A !important;
     }
     .metric-card {
         background-color: #1E2329;
@@ -90,6 +94,13 @@ def save_trades():
     """Save trades to CSV"""
     st.session_state.trades.to_csv('trades_data.csv', index=False)
 
+def delete_trade(trade_id):
+    """Delete a trade by ID"""
+    st.session_state.trades = st.session_state.trades[st.session_state.trades['Trade_ID'] != trade_id]
+    save_trades()
+    st.success(f"✅ Trade {trade_id} deleted!")
+    st.rerun()
+
 def calculate_pnl(direction, entry, exit_price, lots):
     """Calculate P&L and pips"""
     if direction == 'BUY':
@@ -133,7 +144,7 @@ def get_stats():
 
 # Sidebar navigation
 st.sidebar.title("📊 Tradely")
-page = st.sidebar.radio("Navigation", ["Dashboard", "Add Trade", "Trade History", "Analytics", "Calendar View"])
+page = st.sidebar.radio("Navigation", ["Dashboard", "Add Trade", "Trade History", "Manage Trades", "Analytics", "Calendar View"])
 
 # ==================== DASHBOARD PAGE ====================
 if page == "Dashboard":
@@ -166,7 +177,7 @@ if page == "Dashboard":
         recent = st.session_state.trades.tail(10).iloc[::-1]
         
         # Format for display
-        display_df = recent[['Date', 'Time', 'Direction', 'Entry_Price', 'Exit_Price', 
+        display_df = recent[['Trade_ID', 'Date', 'Time', 'Direction', 'Entry_Price', 'Exit_Price', 
                             'PnL', 'Pips', 'Strategy', 'Confluence']].copy()
         display_df['PnL'] = display_df['PnL'].apply(lambda x: f"${x:,.2f}" if x > 0 else f"-${abs(x):,.2f}")
         display_df['Entry_Price'] = display_df['Entry_Price'].apply(lambda x: f"{x:.5f}")
@@ -195,17 +206,20 @@ if page == "Dashboard":
         
         with col2:
             st.subheader("P&L by Strategy")
-            strategy_pnl = st.session_state.trades.groupby('Strategy')['PnL'].sum().reset_index()
-            fig = px.bar(strategy_pnl, x='Strategy', y='PnL',
-                        color='PnL', color_continuous_scale=['FF4757', '00D084'])
-            fig.update_layout(
-                paper_bgcolor='#0F1419',
-                plot_bgcolor='#0F1419',
-                font_color='white',
-                xaxis_gridcolor='#30363D',
-                yaxis_gridcolor='#30363D'
-            )
-            st.plotly_chart(fig, use_container_width=True)
+            if len(st.session_state.trades) > 0:
+                strategy_pnl = st.session_state.trades.groupby('Strategy')['PnL'].sum().reset_index()
+                # FIXED: Use valid Plotly color scale
+                fig = px.bar(strategy_pnl, x='Strategy', y='PnL',
+                            color='PnL', 
+                            color_continuous_scale=[(0, '#FF4757'), (0.5, '#FFD700'), (1, '#00D084')])
+                fig.update_layout(
+                    paper_bgcolor='#0F1419',
+                    plot_bgcolor='#0F1419',
+                    font_color='white',
+                    xaxis_gridcolor='#30363D',
+                    yaxis_gridcolor='#30363D'
+                )
+                st.plotly_chart(fig, use_container_width=True)
     else:
         st.info("No trades yet. Go to 'Add Trade' to start journaling!")
 
@@ -328,6 +342,38 @@ elif page == "Trade History":
     else:
         st.info("No trades recorded yet.")
 
+# ==================== MANAGE TRADES PAGE (DELETE) ====================
+elif page == "Manage Trades":
+    st.title("🗑️ Manage Trades")
+    
+    if len(st.session_state.trades) > 0:
+        st.warning("⚠️ Deleting trades is permanent! Export your data first if needed.")
+        
+        # Show all trades with delete buttons
+        for idx, trade in st.session_state.trades.iterrows():
+            col1, col2, col3, col4 = st.columns([3, 2, 2, 1])
+            
+            with col1:
+                st.write(f"**{trade['Trade_ID']}** - {trade['Date']} {trade['Time']}")
+                st.write(f"{trade['Direction']} @ {trade['Entry_Price']:.5f} → {trade['Exit_Price']:.5f}")
+            
+            with col2:
+                pnl_color = "#00D084" if trade['PnL'] > 0 else "#FF4757"
+                st.markdown(f"<span style='color: {pnl_color}; font-weight: bold;'>${trade['PnL']:,.2f}</span>", unsafe_allow_html=True)
+                st.write(f"{trade['Pips']:.1f} pips")
+            
+            with col3:
+                st.write(f"Strategy: {trade['Strategy']}")
+                st.write(f"Grade: {trade['Confluence']}")
+            
+            with col4:
+                if st.button("🗑️ Delete", key=f"delete_{trade['Trade_ID']}"):
+                    delete_trade(trade['Trade_ID'])
+            
+            st.markdown("---")
+    else:
+        st.info("No trades to manage.")
+
 # ==================== ANALYTICS PAGE ====================
 elif page == "Analytics":
     st.title("📊 Performance Analytics")
@@ -366,17 +412,31 @@ elif page == "Analytics":
             daily_perf = trades.groupby('DayOfWeek')['PnL'].sum().reindex([
                 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'
             ])
-            fig = px.bar(daily_perf, color=daily_perf.values, 
-                        color_continuous_scale=['FF4757', '00D084'])
-            fig.update_layout(showlegend=False)
+            
+            # FIXED: Create valid color scale
+            fig = px.bar(daily_perf, 
+                        color=daily_perf.values,
+                        color_continuous_scale=[(0, '#FF4757'), (0.5, '#FFD700'), (1, '#00D084')])
+            fig.update_layout(
+                paper_bgcolor='#0F1419',
+                plot_bgcolor='#0F1419',
+                font_color='white',
+                showlegend=False
+            )
             st.plotly_chart(fig, use_container_width=True)
         
         with col2:
             st.subheader("Mood vs Performance")
             mood_perf = trades.groupby('Mood')['PnL'].mean()
-            fig = px.bar(mood_perf, color=mood_perf.values,
-                        color_continuous_scale=['FF4757', '00D084'])
-            fig.update_layout(showlegend=False)
+            fig = px.bar(mood_perf, 
+                        color=mood_perf.values,
+                        color_continuous_scale=[(0, '#FF4757'), (0.5, '#FFD700'), (1, '#00D084')])
+            fig.update_layout(
+                paper_bgcolor='#0F1419',
+                plot_bgcolor='#0F1419',
+                font_color='white',
+                showlegend=False
+            )
             st.plotly_chart(fig, use_container_width=True)
     else:
         st.info("Add trades to see analytics!")
@@ -462,18 +522,15 @@ Designed for traders who want to track, analyse, and improve their trading.
 """)
 '''
 
-# Save the updated file
-with open('/mnt/kimi/output/trade_dashboard_app_updated.py', 'w') as f:
-    f.write(updated_app)
+# Save the fixed file
+with open('/mnt/kimi/output/trade_dashboard_app_fixed.py', 'w') as f:
+    f.write(fixed_app)
 
-print("✅ Updated file created with your Tradely branding!")
-print("\n📝 Changes made:")
-print("   - Page title: 'Tradely - Trading Journal'")
-print("   - Sidebar title: 'Tradely'")
-print("   - About section: Your custom description")
-print("   - Docstring: Your branding message")
-print("\n🚀 Next steps:")
-print("   1. Copy the code from trade_dashboard_app_updated.py")
-print("   2. Paste into your GitHub trade_dashboard_app.py file")
-print("   3. Commit changes")
-print("   4. Reboot in Streamlit Cloud")
+print("✅ FIXED app created with:")
+print("   1. ✅ Delete functionality (new 'Manage Trades' page)")
+print("   2. ✅ Fixed Plotly color scale errors")
+print("   3. ✅ All color scales now use valid Plotly format")
+print("\n🚀 To deploy:")
+print("   1. Copy the code from trade_dashboard_app_fixed.py")
+print("   2. Paste into GitHub trade_dashboard_app.py")
+print("   3. Commit and reboot in Streamlit")
